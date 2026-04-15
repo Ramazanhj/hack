@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>CYBER SYSTEM v6</title>
+
+<style>
+body {
+    margin: 0;
+    background: black;
+    color: #00ff88;
+    font-family: monospace;
+    overflow: hidden;
+}
+
+/* SCAN LINES */
+body::before {
+    content: "";
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0,255,136,0.05),
+        rgba(0,255,136,0.05) 1px,
+        transparent 2px,
+        transparent 4px
+    );
+    pointer-events: none;
+}
+
+/* BOOT SCREEN */
+#boot {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: black;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.bar {
+    width: 300px;
+    height: 10px;
+    border: 1px solid #00ff88;
+    margin-top: 10px;
+}
+
+.fill {
+    height: 100%;
+    width: 0%;
+    background: #00ff88;
+}
+
+/* LOGIN */
+#login {
+    height: 100vh;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.glow {
+    width: 140px;
+    filter: drop-shadow(0 0 20px #00ff88);
+}
+
+/* APP */
+.hidden { display: none; }
+
+#app, #history {
+    text-align: center;
+    padding: 20px;
+}
+
+/* INPUT */
+input, button {
+    margin: 6px;
+    padding: 10px;
+    background: black;
+    color: #00ff88;
+    border: 1px solid #00ff88;
+}
+
+/* POPUP MAP */
+#mapBox {
+    width: 90%;
+    height: 300px;
+    margin: auto;
+}
+
+/* HISTORY */
+.list div {
+    cursor: pointer;
+    border-bottom: 1px solid #00ff88;
+    padding: 5px;
+}
+
+/* POPUP */
+#popup {
+    position: fixed;
+    top: 20%;
+    left: 10%;
+    width: 80%;
+    background: black;
+    border: 2px solid #00ff88;
+    padding: 10px;
+}
+
+/* SHAKE */
+@keyframes shake {
+    0%{transform:translate(0)}
+    25%{transform:translate(-5px)}
+    50%{transform:translate(5px)}
+    75%{transform:translate(-5px)}
+    100%{transform:translate(0)}
+}
+.shake { animation: shake 0.3s; }
+
+.fade { transition: 0.5s; opacity: 0; }
+</style>
+</head>
+
+<body>
+
+<!-- BOOT -->
+<div id="boot">
+    <h2>BOOTING SYSTEM...</h2>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+</div>
+
+<!-- LOGIN -->
+<div id="login">
+    <img class="glow"
+    src="data:image/svg+xml;utf8,
+    <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300ff88'>
+    <path d='M12 2c2.2 0 4 1.8 4 4h2c0-3.3-2.7-6-6-6S6 2.7 6 6h2c0-2.2 1.8-4 4-4zm6 6H6L4 20h16l-2-12zm-6 10c-2.2 0-4-1.8-4-4h2c0 1.1.9 2 2 2s2-.9 2-2h2c0 2.2-1.8 4-4 4z'/>
+    </svg>">
+
+    <h2>ACCESS SYSTEM</h2>
+
+    <input type="password" id="pass" placeholder="PASSWORD"><br>
+    <button onclick="login()">ENTER</button>
+
+    <div id="msg"></div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+
+<h2>>> CYBER IP TOOL v6 <<</h2>
+
+<input id="ip" placeholder="ENTER IP"><br>
+
+<button onclick="scan()">SCAN</button>
+<button onclick="myIP()">MY IP</button>
+<button onclick="openHistory()">HISTORY</button>
+
+<div id="result"></div>
+
+<div id="mapBox"></div>
+</div>
+
+<!-- HISTORY -->
+<div id="history" class="hidden">
+<h3>HISTORY</h3>
+<div id="list"></div>
+<button onclick="back()">BACK</button>
+</div>
+
+<!-- POPUP -->
+<div id="popup" class="hidden">
+<div id="ptext"></div>
+<button onclick="closeP()">CLOSE</button>
+</div>
+
+<script>
+
+const PASSWORD = "1234";
+let coords = "";
+
+/* SOUND (browser beep) */
+function beep(freq=600){
+    let ctx = new (window.AudioContext||window.webkitAudioContext)();
+    let o = ctx.createOscillator();
+    o.frequency.value = freq;
+    o.connect(ctx.destination);
+    o.start();
+    setTimeout(()=>o.stop(),100);
+}
+
+/* BOOT */
+let b = 0;
+let boot = setInterval(()=>{
+    b++;
+    document.getElementById("fill").style.width = b+"%";
+    if(b>=100){
+        clearInterval(boot);
+        document.getElementById("boot").style.display="none";
+        document.getElementById("login").style.display="flex";
+    }
+},20);
+
+/* LOGIN */
+function login(){
+    let p = document.getElementById("pass").value.trim();
+
+    if(p===PASSWORD){
+        beep(800);
+        document.getElementById("msg").innerText="ACCESS GRANTED";
+        setTimeout(()=>{
+            document.getElementById("login").classList.add("hidden");
+            document.getElementById("app").classList.remove("hidden");
+        },700);
+    }else{
+        beep(200);
+        document.getElementById("msg").innerText="ACCESS DENIED";
+        document.getElementById("login").classList.add("shake");
+        setTimeout(()=>document.getElementById("login").classList.remove("shake"),300);
+    }
+}
+
+/* IP SCAN */
+async function scan(){
+    let ip = document.getElementById("ip").value.trim();
+    if(!ip) return;
+
+    let r = await fetch("http://ip-api.com/json/"+ip);
+    let d = await r.json();
+
+    coords = d.lat+","+d.lon;
+
+    document.getElementById("result").innerText =
+    "IP: "+ip+"\nCITY: "+d.city+"\nCOUNTRY: "+d.country+"\nISP: "+d.isp;
+
+    save(ip,d);
+    map(coords);
+}
+
+/* MY IP */
+async function myIP(){
+    let ip = await fetch("https://api.ipify.org").then(r=>r.text());
+    document.getElementById("ip").value=ip;
+    scan();
+}
+
+/* MAP */
+function map(c){
+    document.getElementById("mapBox").innerHTML =
+    `<iframe width="100%" height="300"
+    src="https://maps.google.com/maps?q=${c}&z=10&output=embed"></iframe>`;
+}
+
+/* DB */
+function save(ip,d){
+    let db = JSON.parse(localStorage.getItem("db")||"{}");
+    db[ip]=d;
+    localStorage.setItem("db",JSON.stringify(db));
+}
+
+/* HISTORY */
+function openHistory(){
+    document.getElementById("app").classList.add("hidden");
+    document.getElementById("history").classList.remove("hidden");
+
+    let db = JSON.parse(localStorage.getItem("db")||"{}");
+    let html="";
+
+    for(let ip in db){
+        html += `<div onclick="show('${ip}')">${ip} - ${db[ip].city}</div>`;
+    }
+
+    document.getElementById("list").innerHTML=html;
+}
+
+function show(ip){
+    let db = JSON.parse(localStorage.getItem("db"));
+    let d = db[ip];
+
+    document.getElementById("ptext").innerText =
+    ip+"\n"+d.city+"\n"+d.country;
+
+    document.getElementById("popup").classList.remove("hidden");
+}
+
+function closeP(){
+    document.getElementById("popup").classList.add("hidden");
+}
+
+function back(){
+    document.getElementById("history").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+}
+
+</script>
+
+</body>
+</html>
