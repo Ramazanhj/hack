@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>CYBER SYSTEM v6</title>
+<title>CYBER SYSTEM v7</title>
 
 <style>
 body {
@@ -10,10 +10,9 @@ body {
     background: black;
     color: #00ff88;
     font-family: monospace;
-    overflow: hidden;
 }
 
-/* SCAN LINES */
+/* scan lines */
 body::before {
     content: "";
     position: fixed;
@@ -29,51 +28,24 @@ body::before {
     pointer-events: none;
 }
 
-/* BOOT SCREEN */
-#boot {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: black;
-    display: flex;
-    flex-direction: column;
+/* ALL SCREENS */
+.screen {
+    display: none;
+    height: 100vh;
     justify-content: center;
     align-items: center;
+    flex-direction: column;
 }
 
-.bar {
-    width: 300px;
-    height: 10px;
-    border: 1px solid #00ff88;
-    margin-top: 10px;
-}
-
-.fill {
-    height: 100%;
-    width: 0%;
-    background: #00ff88;
+/* ACTIVE SCREEN */
+.active {
+    display: flex;
 }
 
 /* LOGIN */
-#login {
-    height: 100vh;
-    display: none;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-}
-
 .glow {
-    width: 140px;
-    filter: drop-shadow(0 0 20px #00ff88);
-}
-
-/* APP */
-.hidden { display: none; }
-
-#app, #history {
-    text-align: center;
-    padding: 20px;
+    width: 130px;
+    filter: drop-shadow(0 0 15px #00ff88);
 }
 
 /* INPUT */
@@ -83,31 +55,12 @@ input, button {
     background: black;
     color: #00ff88;
     border: 1px solid #00ff88;
+    border-radius: 5px;
 }
 
-/* POPUP MAP */
-#mapBox {
-    width: 90%;
-    height: 300px;
-    margin: auto;
-}
-
-/* HISTORY */
-.list div {
-    cursor: pointer;
-    border-bottom: 1px solid #00ff88;
-    padding: 5px;
-}
-
-/* POPUP */
-#popup {
-    position: fixed;
-    top: 20%;
-    left: 10%;
-    width: 80%;
-    background: black;
-    border: 2px solid #00ff88;
-    padding: 10px;
+button:hover {
+    background: #00ff88;
+    color: black;
 }
 
 /* SHAKE */
@@ -120,20 +73,31 @@ input, button {
 }
 .shake { animation: shake 0.3s; }
 
-.fade { transition: 0.5s; opacity: 0; }
+/* RESULT */
+#result {
+    white-space: pre-line;
+    margin-top: 10px;
+    text-align: center;
+}
+
+/* MAP */
+#map {
+    width: 90%;
+    height: 300px;
+}
 </style>
 </head>
 
 <body>
 
 <!-- BOOT -->
-<div id="boot">
+<div id="boot" class="screen active">
     <h2>BOOTING SYSTEM...</h2>
-    <div class="bar"><div class="fill" id="fill"></div></div>
+    <div id="bar">0%</div>
 </div>
 
 <!-- LOGIN -->
-<div id="login">
+<div id="login" class="screen">
     <img class="glow"
     src="data:image/svg+xml;utf8,
     <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300ff88'>
@@ -142,39 +106,37 @@ input, button {
 
     <h2>ACCESS SYSTEM</h2>
 
-    <input type="password" id="pass" placeholder="PASSWORD"><br>
+    <input type="password" id="pass" placeholder="PASSWORD">
     <button onclick="login()">ENTER</button>
 
     <div id="msg"></div>
 </div>
 
 <!-- APP -->
-<div id="app" class="hidden">
+<div id="app" class="screen">
+    <h2>CYBER IP TOOL v7</h2>
 
-<h2>>> CYBER IP TOOL v6 <<</h2>
+    <input id="ip" placeholder="ENTER IP">
+    <button onclick="scan()">SCAN</button>
+    <button onclick="myIP()">MY IP</button>
+    <button onclick="showHistory()">HISTORY</button>
 
-<input id="ip" placeholder="ENTER IP"><br>
+    <div id="result"></div>
 
-<button onclick="scan()">SCAN</button>
-<button onclick="myIP()">MY IP</button>
-<button onclick="openHistory()">HISTORY</button>
-
-<div id="result"></div>
-
-<div id="mapBox"></div>
+    <iframe id="map"></iframe>
 </div>
 
 <!-- HISTORY -->
-<div id="history" class="hidden">
-<h3>HISTORY</h3>
-<div id="list"></div>
-<button onclick="back()">BACK</button>
+<div id="history" class="screen">
+    <h3>HISTORY</h3>
+    <div id="list"></div>
+    <button onclick="back()">BACK</button>
 </div>
 
 <!-- POPUP -->
-<div id="popup" class="hidden">
-<div id="ptext"></div>
-<button onclick="closeP()">CLOSE</button>
+<div id="popup" class="screen">
+    <div id="popupText"></div>
+    <button onclick="closePopup()">CLOSE</button>
 </div>
 
 <script>
@@ -182,117 +144,109 @@ input, button {
 const PASSWORD = "1234";
 let coords = "";
 
-/* SOUND (browser beep) */
-function beep(freq=600){
-    let ctx = new (window.AudioContext||window.webkitAudioContext)();
-    let o = ctx.createOscillator();
-    o.frequency.value = freq;
-    o.connect(ctx.destination);
-    o.start();
-    setTimeout(()=>o.stop(),100);
+/* ---------------- BOOT ---------------- */
+let p = 0;
+let boot = setInterval(() => {
+    p++;
+    document.getElementById("bar").innerText = p + "%";
+
+    if (p >= 100) {
+        clearInterval(boot);
+        switchScreen("boot", "login");
+    }
+}, 20);
+
+/* ---------------- SCREEN SWITCH ---------------- */
+function switchScreen(from, to) {
+    document.getElementById(from).classList.remove("active");
+    document.getElementById(to).classList.add("active");
 }
 
-/* BOOT */
-let b = 0;
-let boot = setInterval(()=>{
-    b++;
-    document.getElementById("fill").style.width = b+"%";
-    if(b>=100){
-        clearInterval(boot);
-        document.getElementById("boot").style.display="none";
-        document.getElementById("login").style.display="flex";
-    }
-},20);
-
-/* LOGIN */
-function login(){
+/* ---------------- LOGIN ---------------- */
+function login() {
     let p = document.getElementById("pass").value.trim();
 
-    if(p===PASSWORD){
-        beep(800);
-        document.getElementById("msg").innerText="ACCESS GRANTED";
-        setTimeout(()=>{
-            document.getElementById("login").classList.add("hidden");
-            document.getElementById("app").classList.remove("hidden");
-        },700);
-    }else{
-        beep(200);
-        document.getElementById("msg").innerText="ACCESS DENIED";
+    if (p === PASSWORD) {
+        document.getElementById("msg").innerText = "ACCESS GRANTED";
+
+        setTimeout(() => {
+            switchScreen("login", "app");
+        }, 700);
+
+    } else {
+        document.getElementById("msg").innerText = "ACCESS DENIED";
         document.getElementById("login").classList.add("shake");
-        setTimeout(()=>document.getElementById("login").classList.remove("shake"),300);
+
+        setTimeout(() => {
+            document.getElementById("login").classList.remove("shake");
+        }, 300);
     }
 }
 
-/* IP SCAN */
-async function scan(){
+/* ---------------- IP SCAN ---------------- */
+async function scan() {
     let ip = document.getElementById("ip").value.trim();
-    if(!ip) return;
+    if (!ip) return;
 
-    let r = await fetch("http://ip-api.com/json/"+ip);
+    let r = await fetch("http://ip-api.com/json/" + ip);
     let d = await r.json();
 
-    coords = d.lat+","+d.lon;
+    coords = d.lat + "," + d.lon;
 
     document.getElementById("result").innerText =
-    "IP: "+ip+"\nCITY: "+d.city+"\nCOUNTRY: "+d.country+"\nISP: "+d.isp;
+        "IP: " + ip + "\nCITY: " + d.city + "\nCOUNTRY: " + d.country;
 
-    save(ip,d);
-    map(coords);
+    document.getElementById("map").src =
+        "https://maps.google.com/maps?q=" + coords + "&z=10&output=embed";
+
+    save(ip, d);
 }
 
-/* MY IP */
-async function myIP(){
-    let ip = await fetch("https://api.ipify.org").then(r=>r.text());
-    document.getElementById("ip").value=ip;
+/* ---------------- MY IP ---------------- */
+async function myIP() {
+    let ip = await fetch("https://api.ipify.org").then(r => r.text());
+    document.getElementById("ip").value = ip;
     scan();
 }
 
-/* MAP */
-function map(c){
-    document.getElementById("mapBox").innerHTML =
-    `<iframe width="100%" height="300"
-    src="https://maps.google.com/maps?q=${c}&z=10&output=embed"></iframe>`;
+/* ---------------- DB ---------------- */
+function save(ip, d) {
+    let db = JSON.parse(localStorage.getItem("db") || "{}");
+    db[ip] = d;
+    localStorage.setItem("db", JSON.stringify(db));
 }
 
-/* DB */
-function save(ip,d){
-    let db = JSON.parse(localStorage.getItem("db")||"{}");
-    db[ip]=d;
-    localStorage.setItem("db",JSON.stringify(db));
-}
+/* ---------------- HISTORY ---------------- */
+function showHistory() {
+    switchScreen("app", "history");
 
-/* HISTORY */
-function openHistory(){
-    document.getElementById("app").classList.add("hidden");
-    document.getElementById("history").classList.remove("hidden");
+    let db = JSON.parse(localStorage.getItem("db") || "{}");
+    let html = "";
 
-    let db = JSON.parse(localStorage.getItem("db")||"{}");
-    let html="";
-
-    for(let ip in db){
-        html += `<div onclick="show('${ip}')">${ip} - ${db[ip].city}</div>`;
+    for (let ip in db) {
+        html += `<div onclick="openIP('${ip}')">${ip} - ${db[ip].city}</div>`;
     }
 
-    document.getElementById("list").innerHTML=html;
+    document.getElementById("list").innerHTML = html;
 }
 
-function show(ip){
+function openIP(ip) {
     let db = JSON.parse(localStorage.getItem("db"));
     let d = db[ip];
 
-    document.getElementById("ptext").innerText =
-    ip+"\n"+d.city+"\n"+d.country;
+    document.getElementById("popupText").innerText =
+        ip + "\n" + d.city + "\n" + d.country;
 
-    document.getElementById("popup").classList.remove("hidden");
+    switchScreen("history", "popup");
 }
 
-function closeP(){
-    document.getElementById("popup").classList.add("hidden");
+function closePopup() {
+    switchScreen("popup", "history");
 }
 
-function back(){
-    document.getElementById("history").classList.add("hidden");
-    document.getElementById("app").classList.remove("hidden");
+/* ---------------- BACK ---------------- */
+function back() {
+    switchScreen("history", "app");
 }
 
 </script>
